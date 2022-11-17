@@ -10,7 +10,7 @@ from inverse_problem.observation_generation import create_artificial_observation
 
 set_log_level(30)
 np.random.seed(42)
-is_3D = False
+is_3D = True
 suffix = ""
 
 if is_3D:

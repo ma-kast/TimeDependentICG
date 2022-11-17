@@ -15,7 +15,7 @@ def init_meshes_3D_forward():
 
 def init_meshes_3D_inverse():
     mesh = Mesh(base_path_mesh+ "3D_mesh.xml")
-    boundaries = MeshFunction(base_path_mesh+ "size_t", mesh, "3D_boundaries.xml")
+    boundaries = MeshFunction( "size_t", mesh,base_path_mesh+ "3D_boundaries.xml")
     return mesh, boundaries
 
 def init_meshes_2D_forward():

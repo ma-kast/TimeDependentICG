@@ -8,7 +8,7 @@ from inverse_problem.problem_definition import forward_run
 from inverse_problem.loss_optimization import get_loss_callback, get_regularization_term_bilaplace,\
     get_optimization_callback
 
-is_3D = False
+is_3D = True
 suffix = ""
 set_log_level(30)
 
