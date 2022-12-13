@@ -33,19 +33,21 @@ def add_noise_to_field(u, noise_level, is_rel = False):
     u.vector().axpy(1, noise.vector())
 
 
-def create_artificial_observation_callback(h_file,factor_t ,boundary_mesh, boundary_mesh_coarse, mesh_coarse,noise_level, is_rel= True, is_3D= False):
+def create_artificial_observation_callback(h_file,factor_t ,ds, boundary_mesh, boundary_mesh_coarse, mesh_coarse, element_order, noise_level, is_rel= True, is_3D= False):
 
-    if not is_3D:
-        V_coarse = FunctionSpace(mesh_coarse, "CG", 1)
+    #if not is_3D:
+    V_coarse = FunctionSpace(mesh_coarse, "DG", element_order)
 
     def callback(c,u,v,n):
 
         print("saving solution for n=", n," observation=", int((n + 1) / factor_t - 1))
         if is_3D:
-            final_field = obtain_surface_value_field(v, boundary_mesh, boundary_mesh_coarse, mesh_coarse)
+            final_field = interpolate(v, V_coarse) #obtain_surface_value_field(v, boundary_mesh, boundary_mesh_coarse, mesh_coarse)
         else:
             final_field = interpolate(v, V_coarse)
-        add_noise_to_field(final_field, noise_level, is_rel)
+        average = assemble(v*ds(5))/np.power(2.5,2)
+        print(average)
+        add_noise_to_field(final_field, noise_level*np.abs(average), False)
 
         write_to_h_file(h_file, final_field, "v_noise", int((n + 1) / factor_t - 1))
 
@@ -59,9 +61,10 @@ def write_to_h_file(h_file, field, field_name, index):
 
 def create_solution_out_callback(save_path_solution_base, mesh, factor_t):
     names = ["c", "u", "v", "rhs_for_v"]
+    #V3 = VectorFunctionSpace(mesh, "CG", 2)
     h_files =  []
     for name in names:
-        h_file = XDMFFile(mesh.mpi_comm(), save_path_solution_base+name + ".xdmf")
+        h_file = XDMFFile(mesh.mpi_comm(), save_path_solution_base+ "_" +name + ".xdmf")
         h_file.write(mesh)
         h_files.append(h_file)
 
@@ -71,12 +74,25 @@ def create_solution_out_callback(save_path_solution_base, mesh, factor_t):
         write_to_h_file(h_files[2], v, "v", (n + 1) / factor_t - 1)
 
         rhs_for_v = project(u * c, c.function_space())
+        #grad_v = project(grad(v), V3).split()[1]
         write_to_h_file(h_files[3], rhs_for_v, "rhs_for_v", (n + 1) / factor_t - 1)
+
+
 
     return callback, factor_t
 
 
 def create_extract_points_v_callback(num_steps, points, data_block):
+
+    def callback(c, u, v, n):
+        for index, point in enumerate(points):
+            val = v(point)
+            data_block[n, index] = val
+
+    return callback, 1
+
+
+def create_extract_points_v_callback_3D(num_steps, points, data_block):
 
     def callback(c, u, v, n):
         for index, point in enumerate(points):

@@ -3,18 +3,19 @@ from fenics_adjoint import *
 
 from inverse_problem.mesh_handling import init_meshes_2D_inverse, init_meshes_3D_inverse
 
-from inverse_problem.problem_definition import forward_run, forward_run_analytic
+from inverse_problem.problem_definition import forward_run_c
 
 from inverse_problem.loss_optimization import get_loss_callback, get_regularization_term_bilaplace,\
     get_optimization_callback
 
 is_3D = True
 is_constant_source = True
-uses_diffusion = False
+with_env_ICG = False
+simu_type = ""
 suffix = ""
 set_log_level(30)
 element_order = 1
-noise_level = 1e-1 # Technically, we need to guess this for the inverse problem
+
 if is_3D:
     suffix = "3D"
     mesh, boundaries = init_meshes_3D_inverse()
@@ -38,40 +39,42 @@ dx = Measure('dx', domain=mesh)
 ds = Measure('ds', domain=mesh, subdomain_data=boundaries)
 V= FunctionSpace(mesh, "CG", element_order)
 
-# set data to load
 if is_constant_source:
-    v_file_str = "forward_run" + suffix + '/v_obs_const.xdmf'
-else:
-    v_file_str=  'forward_run' + suffix + "/v_obs.xdmf"
+    simu_type = simu_type + "_const"
+if with_env_ICG:
+    simu_type = simu_type + "_env"
+
+
+v_file_str = 'forward_run_analytic' + suffix + '/v_obs' + simu_type + '.xdmf'
+
+v_file = XDMFFile(v_file_str)
 
 v_file = XDMFFile(v_file_str)
 
 V_param = FunctionSpace(mesh, 'CG', 1)
 
-tumor = Function(V_param)
-tumor.rename("tumor", "")
+ICG = Function(V_param)
+ICG.rename("ICG", "")
 
 loss = [0]
 
 # Computes the loss during the forward run
-loss_callback = get_loss_callback(v_file, loss, mesh, boundaries, is_3D, noise_level, element_order)
+loss_callback = get_loss_callback(v_file, loss, mesh, boundaries, is_3D,  element_order)
 
 n_snapshots_inv = 1
 loss_callback = (loss_callback[0], n_snapshots_inv) # only consider 5 snapshots
+
 #forward_run(tumor, dx, ds, V, num_steps, T, is_3D,is_constant_source, [loss_callback], uses_diffusion) # Has to be run for taping purposes.
-forward_run_analytic(tumor, dx, ds,V, num_steps, T, is_3D, is_constant_source, [loss_callback])
+forward_run_c(ICG, dx, ds,V, is_3D, is_constant_source, [loss_callback])
 
-reg_operator_bilaplace = get_regularization_term_bilaplace(lengthscale, sigma2, dim, V_param, dx, ds)
+total_loss = loss[0]
 
-
-total_loss = loss[0]*n_snapshots_inv #+ 1E-4*reg_operator_bilaplace(tumor)
-
-control_var = Control(tumor)
+control_var = Control(ICG)
 
 Jhat = ReducedFunctional(total_loss,[control_var])
 
 # create a callback, so we can follow the optimization.
-vtkfile = File('inverse_run'+ suffix +'/result.pvd')
+vtkfile = File('inverse_run_analytic'+ suffix +'/result' + simu_type+ '_ICG.pvd')
 opt_callback = get_optimization_callback(control_var, vtkfile)
 
 g_opt = minimize(Jhat, method ="L-BFGS-B", tol = 1e-8,

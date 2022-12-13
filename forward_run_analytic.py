@@ -6,46 +6,50 @@ from inverse_problem.mesh_handling import init_meshes_2D_forward, init_meshes_3D
 
 from inverse_problem.problem_definition import forward_run, forward_run_analytic
 
-from inverse_problem.observation_generation import create_artificial_observation_callback, create_solution_out_callback
+from inverse_problem.observation_generation import create_artificial_observation_callback, create_solution_out_callback,\
+    create_extract_points_v_callback_3D
 
 set_log_level(30)
 np.random.seed(42)
 is_3D = True
 is_constant_source = True
-uses_diffusion = False
+with_env_ICG = False
 suffix = ""
-
+simu_type = ""
 
 
 if is_3D:
     suffix = '3D'
-save_path_tumor_loc = 'forward_run'+suffix + '/parameter_setting.pvd'
-save_path_solution_base = 'forward_run' + suffix + "/solution_"
+save_path_tumor_loc = 'forward_run_analytic'+suffix + '/parameter_setting.pvd'
+
 
 if is_constant_source:
-    save_path_observations = 'forward_run'+suffix + '/v_obs_const.xdmf'
-else:
-    save_path_observations = 'forward_run' + suffix + '/v_obs.xdmf'
+    simu_type = simu_type + "_const"
+if with_env_ICG:
+    simu_type = simu_type + "_env"
 
-factor_t = 2
-noise_level = 0.1
+
+save_path_observations = 'forward_run_analytic' + suffix + '/v_obs' + simu_type + 'noise.xdmf'
+save_path_solution_base = 'forward_run_analytic' + suffix + "/solution" + simu_type
+factor_t = 1
+noise_level = 0.03
 
 if is_3D:
     suffix = "3D"
-    T = 20
-    num_steps = 5*factor_t # 100*factor_t
+    T = 20 +20
+    num_steps = 5 +5
     dim = 3
     mesh, mesh_coarse, boundaries, boundary_mesh_f, boundary_mesh_c = init_meshes_3D_forward_gmsh()
-    noise_level = 0.01
+
 else:
-    T = 30
-    num_steps = 120*factor_t
+    T = 20
+    num_steps = 5
     dim = 2
     mesh, mesh_coarse, boundaries = init_meshes_2D_forward()
     boundary_mesh_f = None
     boundary_mesh_c = None
 
-element_order = int(1)
+element_order = 1
 V = FunctionSpace(mesh, 'CG', element_order)
 dx = Measure('dx', domain=mesh)
 ds = Measure('ds', domain=mesh, subdomain_data=boundaries)
@@ -60,10 +64,6 @@ solution_callback = create_solution_out_callback(save_path_solution_base, mesh, 
 
 callbacks = [solution_callback, obs_callback_tup ]
 
-
-
-# V = FunctionSpace(mesh, 'Lagrange', element_order)
-
 # Define ground truth
 if is_3D:
     tumor_term = Expression('pow(x[0]-0.5 ,2) + pow(x[1] - 2,2) + pow(x[2] ,2) < pow(0.3,2)', degree=2)
@@ -74,10 +74,18 @@ tumor = interpolate(tumor_term, V)
 
 # Save ground truth to file
 tumor.rename("tumor", "")
+
+
+points = [[-2.5, 2.5,-2.5],[0.5,2.5, 0], [0.0,2.5, 0],  [2.5, 2.5, 0] ]
+n_points = len(points)
+data_block = np.zeros((num_steps,n_points))
+point_callback = create_extract_points_v_callback_3D(num_steps, points, data_block)
+callbacks.append(point_callback)
 vtkfile = File(save_path_tumor_loc)
 vtkfile << (tumor, 0)
 
 
 #Perform forward run and save observations
-#forward_run(tumor, dx, ds,V, num_steps, T, is_3D,is_constant_source, callbacks, uses_diffusion)
-forward_run_analytic(tumor, dx, ds,V, num_steps, T, is_3D, is_constant_source, callbacks)
+forward_run_analytic(tumor, dx, ds,V, num_steps, T, is_3D, is_constant_source, with_env_ICG, callbacks)
+
+np.save("point_data_no_ICG.npy",data_block)

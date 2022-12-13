@@ -5,19 +5,24 @@ import numpy as np
 import scipy.special
 
 
-def get_loss_callback(v_file, loss, mesh, boundaries, is_3D, noise_level):
+def get_loss_callback(v_file, loss, mesh, boundaries, is_3D,  element_order):
 
     if is_3D:
-        V = FunctionSpace(mesh, 'DG', 0)
+        V = FunctionSpace(mesh, 'DG', element_order)
     else:
-        V = FunctionSpace(mesh, 'CG', 1)
+        V = FunctionSpace(mesh, 'DG', 1) #important for consistency, needs tobe the function space where we saved the observations
     v_obs = Function(V)
+
     ds = Measure('ds', subdomain_data=boundaries)
 
     def callback(c, u, v, n):
         v_file.read_checkpoint(v_obs, "v_noise", n)
-        observation_operator = (1/noise_level**2) * (v - v_obs) * (v - v_obs) * ds(5)
-        loss[0] = loss[0] + assemble(observation_operator)
+        average = assemble(v_obs*ds(5))
+
+        #average=1
+        print(average)
+        observation_operator = (v - v_obs) * (v - v_obs) * ds(5)
+        loss[0] = loss[0] + assemble(observation_operator)/average
 
     return callback, 1
 

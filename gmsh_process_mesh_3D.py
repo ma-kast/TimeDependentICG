@@ -1,53 +1,22 @@
 from dolfin import *
 base_path = "meshes/"
-
-is_fine = True
-suffix = ""
-if is_fine:
-    resolution_sides = 6
-    resolution_depth = 6
-    suffix= "_fine"
-else:
-    resolution_sides = 4
-    resolution_depth = 4
 left_p = -2.5
 right_p = 2.5
 up_p = 2.5
 down_p = -1.5
 back_p = -2.5
 front_p = 2.5
-#box = Rectangle(Point(left_p,down_p), Point(right_p, up_p))
 
 
-mesh = BoxMesh(Point(left_p,down_p, back_p), Point(right_p, up_p, front_p), resolution_sides, resolution_depth,resolution_sides) # generate_mesh(box, resolution)
+is_fine = True
+suffix = ""
 
+if is_fine:
+    suffix= "_fine"
 
-class BorderTop(SubDomain):
-    def inside(self, x, on_boundary):
-        return x[1]>2.25
-
-class BorderMid(SubDomain):
-        def inside(self, x, on_boundary):
-            return x[1] > 1.25
-
-borderT = BorderTop()
-borderM = BorderMid()
-
-# Number of refinements
-nor = 3
-
-for i in range(nor):
-    edge_markers = MeshFunction("bool", mesh, mesh.topology().dim() - 1)
-    borderM.mark(edge_markers, True)
-
-    mesh= refine(mesh, edge_markers)
-
-nor=1
-for i in range(nor):
-    edge_markers = MeshFunction("bool", mesh, mesh.topology().dim() - 1)
-    borderT.mark(edge_markers, True)
-
-    mesh= refine(mesh, edge_markers)
+mesh = Mesh()
+f = XDMFFile(mesh.mpi_comm(), base_path + "3D_mesh" + suffix +".xdmf")
+f.read(mesh)
 
 
 boundaries = MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
@@ -95,7 +64,7 @@ bottom = Bottom()
 bottom.mark(boundaries, 6)
 
 
-File(base_path + "3D_mesh" + suffix+".xml") << mesh
-File(base_path + "3D_boundaries" + suffix+".xml") << boundaries
+#File(base_path + "3D_mesh" + suffix+".xml") << mesh
+#File(base_path + "3D_boundaries" + suffix+".xml") << boundaries
 XDMFFile(base_path + "3D_mesh" + suffix+".xdmf").write(mesh)
 XDMFFile(base_path + "3D_boundaries" + suffix+".xdmf").write(boundaries)

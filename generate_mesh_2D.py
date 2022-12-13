@@ -19,8 +19,8 @@ down_p = -1.5
 if is_fine:
     mesh = RectangleMesh(Point(left_p,down_p), Point(right_p, up_p), resolution, resolution, 'crossed') # generate_mesh(box, resolution)
 else:
-
-    mesh = RectangleMesh.create( [Point(left_p,down_p), Point(right_p, up_p) ], [resolution, resolution], CellType.Type.quadrilateral)
+    mesh = RectangleMesh(Point(left_p, down_p), Point(right_p, up_p), resolution, resolution, 'crossed')
+    #mesh = RectangleMesh.create( [Point(left_p,down_p), Point(right_p, up_p) ], [resolution, resolution], CellType.Type.quadrilateral)
 
 class Border(SubDomain):
     def inside(self, x, on_boundary):
