@@ -5,6 +5,10 @@ import numpy as np
 import scipy.special
 
 
+
+
+
+
 def get_loss_callback(v_file, loss, mesh, boundaries, is_3D,  element_order):
 
     if is_3D:
@@ -47,6 +51,7 @@ def get_regularization_term_bilaplace(lengthscale, var, dim, V_param, dx, ds):
 
     scaling, mass_term, beta_robin = compute_reg_constants(lengthscale, var, dim)
 
+
     MinvA_mu = Function(V_param)
     a_ = TestFunction(V_param)
     a = TrialFunction(V_param)
@@ -55,7 +60,7 @@ def get_regularization_term_bilaplace(lengthscale, var, dim, V_param, dx, ds):
 
     def operator(trial_func, test_func):
         rhs_for_reg = scaling * (mass_term * trial_func * test_func * dx + dot(grad(trial_func), grad(test_func))
-                                 * dx + beta_robin * trial_func * test_func * ds)
+                                 * dx + 1e4* beta_robin * trial_func * test_func * ds)
         return rhs_for_reg
 
     def apply_regularizer(mu, output):
