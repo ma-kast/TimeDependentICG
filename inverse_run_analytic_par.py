@@ -66,7 +66,7 @@ forward_run_analytic(tumor, dx, ds,V, num_steps, T, is_3D, is_constant_source, w
 reg_operator_bilaplace = get_regularization_term_bilaplace(lengthscale, sigma2, dim, V_param, dx, ds)
 
 
-total_loss = loss[0]*n_snapshots_inv * 1/noise_level**2 + 1e-5* reg_operator_bilaplace(tumor)
+total_loss = loss[0]*n_snapshots_inv * 1/noise_level**2 + 1e-6* reg_operator_bilaplace(tumor)
 
 control_var = Control(tumor)
 

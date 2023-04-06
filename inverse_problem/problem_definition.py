@@ -147,6 +147,7 @@ def forward_run_analytic(tumor, dx, ds,V, num_steps, T, is_3D, is_constant_sourc
     for n in range(num_steps):
 
         t_cur.assign( (n + 1) * dt_val)
+        print((n + 1) * dt_val)
         solve(lhs_c == rhs_c, c_out, solver_parameters={"linear_solver": "gmres"})
         solver_u.solve()
         solver_v.solve()
